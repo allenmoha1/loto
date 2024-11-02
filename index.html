@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ロト番号予測システム</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2, h3 {
+            color: #333;
+            text-align: center;
+        }
+        .tab-container {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #eee;
+            border: none;
+            flex: 1;
+            font-size: 16px;
+        }
+        .tab.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .button {
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+            font-size: 16px;
+            width: 200px;
+        }
+        .button:hover {
+            background-color: #218838;
+        }
+        .file-input {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            text-align: center;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .results-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .analysis-box {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: white;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .number {
+            display: inline-block;
+            width: 36px;
+            height: 36px;
+            line-height: 36px;
+            text-align: center;
+            border-radius: 50%;
+            background-color: #007bff;
+            color: white;
+            margin: 0 2px;
+            font-weight: bold;
+        }
+        .bonus {
+            background-color: #dc3545;
+        }
+        .prediction {
+            background-color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+            padding: 15px;
+            margin: 10px 0;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+        }
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        .loading-content {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            z-index: 1001;
+            width: 80%;
+            max-width: 500px;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 5px solid #007bff;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #f3f3f3;
+            margin: 15px 0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 24px;
+            background-color: #007bff;
+            border-radius: 4px;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .analysis-step {
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: left;
+            font-size: 14px;
+        }
+        .analysis-step.completed {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .analysis-step.in-progress {
+            background-color: #cce5ff;
+            color: #004085;
+        }
+        .chart-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #frequencyChart {
+            width: 100%;
+            height: 300px;
+        }
+        .download-button {
+            background-color: #17a2b8;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+            font-size: 16px;
+            width: 200px;
+        }
+        .download-button:hover {
+            background-color: #138496;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .note {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .note ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ロト番号予測システム</h1>
+        
+        <div class="tab-container">
+            <button class="tab active" data-tab="loto6">ロト6</button>
+            <button class="tab" data-tab="loto7">ロト7</button>
+        </div>
+
+        <div class="file-input">
+            <div id="loto6-input">
+                <h3>ロト6のCSVファイルを選択</h3>
+                <input type="file" id="loto6-file" accept=".csv">
+            </div>
+            <div id="loto7-input" style="display: none;">
+                <h3>ロト7のCSVファイルを選択</h3>
+                <input type="file" id="loto7-file" accept=".csv">
+            </div>
+        </div>
+
+        <div class="button-container">
+            <button id="analyze-button" class="button">分析・予測開始</button>
+            <button id="save-button" class="download-button">結果を保存</button>
+        </div>
+
+        <div id="error-message"></div>
+
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <h3>分析中...</h3>
+                <div class="progress-container">
+                    <div id="progress-bar" class="progress-bar">0%</div>
+                </div>
+                <div id="analysis-steps">
+                    <div id="step-1" class="analysis-step">1. データの読み込み</div>
+                    <div id="step-2" class="analysis-step">2. 出現頻度の分析</div>
+                    <div id="step-3" class="analysis-step">3. パターン分析</div>
+                    <div id="step-4" class="analysis-step">4. 予測番号の生成</div>
+                    <div id="step-5" class="analysis-step">5. 結果の表示</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-container">
+            <div class="analysis-box">
+                <h2>データ分析結果</h2>
+                <div id="analysis-result"></div>
+                <div class="chart-container">
+                    <canvas id="frequencyChart"></canvas>
+                </div>
+            </div>
+            <div class="analysis-box">
+                <h2>予測番号</h2>
+                <div id="prediction-result"></div>
+            </div>
+        </div>
+
+        <div id="historical-data"></div>
+    </div>
+
+<script>
+    // グローバル変数
+    let currentTab = 'loto6';
+    let loto6Data = [];
+    let loto7Data = [];
+    let frequencyChart = null;
+
+    // DOM読み込み完了時の初期化
+    document.addEventListener('DOMContentLoaded', function() {
+        // タブの切り替え処理
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const tabType = this.getAttribute('data-tab');
+                switchTab(tabType);
+            });
+        });
+
+        // ファイル入力の処理
+        document.getElementById('loto6-file').addEventListener('change', function(e) {
+            handleFileUpload(e, false);
+        });
+
+        document.getElementById('loto7-file').addEventListener('change', function(e) {
+            handleFileUpload(e, true);
+        });
+
+        // ボタンの処理
+        document.getElementById('analyze-button').addEventListener('click', analyzePredictNumbers);
+        document.getElementById('save-button').addEventListener('click', saveResults);
+    });
+
+    // 進捗状況の更新
+    function updateProgress(step, totalSteps) {
+        const progress = (step / totalSteps) * 100;
+        const progressBar = document.getElementById('progress-bar');
+        progressBar.style.width = `${progress}%`;
+        progressBar.textContent = `${Math.round(progress)}%`;
+    }
+
+    // 分析ステップの更新
+    function updateAnalysisStep(stepNumber, status) {
+        const step = document.getElementById(`step-${stepNumber}`);
+        if (status === 'completed') {
+            step.classList.remove('in-progress');
+            step.classList.add('completed');
+            step.innerHTML += ' ✓';
+        } else if (status === 'in-progress') {
+            step.classList.remove('completed');
+            step.classList.add('in-progress');
+            step.innerHTML = step.innerHTML.replace(' ✓', '');
+        } else {
+            step.classList.remove('completed', 'in-progress');
+            step.innerHTML = step.innerHTML.replace(' ✓', '');
+        }
+    }
+
+    // エラー表示関数
+    function showError(message) {
+        const errorDiv = document.getElementById('error-message');
+        errorDiv.innerHTML = message ? `<div class="error">${message}</div>` : '';
+    }
+
+    // タブ切り替え関数
+    function switchTab(tab) {
+        try {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+            
+            document.getElementById('loto6-input').style.display = tab === 'loto6' ? 'block' : 'none';
+            document.getElementById('loto7-input').style.display = tab === 'loto7' ? 'block' : 'none';
+            
+            clearResults();
+        } catch (error) {
+            showError('タブの切り替え中にエラーが発生しました: ' + error.message);
+        }
+    }
+
+    // ファイルアップロード処理
+    async function handleFileUpload(event, isLoto7) {
+        try {
+            const file = event.target.files[0];
+            if (!file) {
+                showError('ファイルが選択されていません。');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = parseLotoCSV(e.target.result, isLoto7);
+                    if (isLoto7) {
+                        loto7Data = data;
+                    } else {
+                        loto6Data = data;
+                    }
+                    showError('');
+                } catch (error) {
+                    showError('CSVファイルの解析中にエラーが発生しました: ' + error.message);
+                }
+            };
+            reader.onerror = function() {
+                showError('ファイルの読み込み中にエラーが発生しました。');
+            };
+            reader.readAsText(file);
+        } catch (error) {
+            showError('ファイルアップロード中にエラーが発生しました: ' + error.message);
+        }
+    }
+
+    // CSVパース処理
+    function parseLotoCSV(csv, isLoto7) {
+        const lines = csv.split('\n');
+        if (lines.length < 2) {
+            throw new Error('データが空か不正です');
+        }
+
+        const data = [];
+        const expectedColumns = isLoto7 ? 11 : 9;
+
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+
+            const values = line.split(',');
+            if (values.length < expectedColumns) {
+                throw new Error(`行 ${i} のデータ形式が不正です`);
+            }
+
+            const entry = {
+                回号: values[0],
+                抽選日: values[1],
+                numbers: values.slice(2, isLoto7 ? 9 : 8).map(n => {
+                    const num = parseInt(n);
+                    if (isNaN(num)) throw new Error(`行 ${i} に無効な数値があります`);
+                    return num;
+                }),
+                ボーナス: values.slice(isLoto7 ? 9 : 8, isLoto7 ? 11 : 9).map(n => {
+                    const num = parseInt(n);
+                    if (isNaN(num)) throw new Error(`行 ${i} に無効な数値があります`);
+                    return num;
+                })
+            };
+            data.push(entry);
+        }
+
+        return data;
+    }
+
+    // 分析・予測実行関数
+    async function analyzePredictNumbers() {
+        try {
+            const data = currentTab === 'loto6' ? loto6Data : loto7Data;
+            if (!data || data.length === 0) {
+                showError('CSVファイルを選択してください。');
+                return;
+            }
+
+            // データの形式チェック
+            const isValidData = data.every(entry => 
+                entry.numbers && 
+                entry.numbers.length === (currentTab === 'loto6' ? 6 : 7) &&
+                entry.ボーナス &&
+                entry.ボーナス.length === (currentTab === 'loto6' ? 1 : 2)
+            );
+
+            if (!isValidData) {
+                showError('CSVデータの形式が正しくありません。');
+                return;
+            }
+
+            // ローディング表示の開始
+            document.getElementById('loading-overlay').style.display = 'block';
+            
+            // ステップ1: データの読み込み
+            updateAnalysisStep(1, 'in-progress');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            updateAnalysisStep(1, 'completed');
+            updateProgress(1, 5);
+
+            // ステップ2: 出現頻度の分析
+            updateAnalysisStep(2, 'in-progress');
+            const frequency = analyzeFrequency(data);
+            const totalDraws = data.length;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            updateAnalysisStep(2, 'completed');
+            updateProgress(2, 5);
+
+            // ステップ3: パターン分析
+            updateAnalysisStep(3, 'in-progress');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            updateAnalysisStep(3, 'completed');
+            updateProgress(3, 5);
+
+            // ステップ4: 予測番号の生成
+            updateAnalysisStep(4, 'in-progress');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            displayAnalysisResults(frequency, totalDraws);
+            displayPredictions();
+            updateAnalysisStep(4, 'completed');
+            updateProgress(4, 5);
+
+            // ステップ5: 結果の表示
+            updateAnalysisStep(5, 'in-progress');
+            updateFrequencyChart(frequency);
+            displayHistoricalData(data.slice(0, 5));
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            updateAnalysisStep(5, 'completed');
+            updateProgress(5, 5);
+
+            // 完了後、少し待ってからローディング表示を終了
+            await new Promise(resolve => setTimeout(resolve, 500));
+            document.getElementById('loading-overlay').style.display = 'none';
+
+            showError(''); // エラーメッセージをクリア
+        } catch (error) {
+            document.getElementById('loading-overlay').style.display = 'none';
+            showError('分析中にエラーが発生しました: ' + error.message);
+        }
+    }
+ // 出現頻度分析関数
+    function analyzeFrequency(data) {
+        const frequency = {};
+        const maxNumber = currentTab === 'loto6' ? 43 : 37;
+
+        // 初期化
+        for (let i = 1; i <= maxNumber; i++) {
+            frequency[i] = 0;
+        }
+
+        // 出現回数をカウント
+        data.forEach(entry => {
+            entry.numbers.forEach(num => {
+                frequency[num]++;
+            });
+        });
+
+        return frequency;
+    }
+
+    // 分析結果表示関数
+    function displayAnalysisResults(frequency, totalDraws) {
+        // 頻度を降順でソート
+        const sortedFrequency = Object.entries(frequency)
+            .map(([num, count]) => ({
+                number: parseInt(num),
+                count: count,
+                percentage: (count / totalDraws * 100).toFixed(2)
+            }))
+            .sort((a, b) => b.count - a.count);
+
+        let analysisHtml = `
+            <p>総抽選回数: ${totalDraws}回</p>
+            <h3>出現頻度ランキング</h3>
+            <table>
+                <tr>
+                    <th>順位</th>
+                    <th>番号</th>
+                    <th>出現回数</th>
+                    <th>出現率</th>
+                </tr>
+        `;
+
+        // 上位10個の結果を表示
+        sortedFrequency.slice(0, 10).forEach((item, index) => {
+            analysisHtml += `
+                <tr>
+                    <td>${index + 1}位</td>
+                    <td><span class="number">${item.number}</span></td>
+                    <td>${item.count}回</td>
+                    <td>${item.percentage}%</td>
+                </tr>
+            `;
+        });
+
+        analysisHtml += '</table>';
+
+        // 低頻度の番号も表示
+        analysisHtml += `
+            <h3>出現頻度の低い番号</h3>
+            <table>
+                <tr>
+                    <th>順位</th>
+                    <th>番号</th>
+                    <th>出現回数</th>
+                    <th>出現率</th>
+                </tr>
+        `;
+
+        // 下位5個の結果を表示
+        sortedFrequency.slice(-5).reverse().forEach((item, index) => {
+            analysisHtml += `
+                <tr>
+                    <td>${sortedFrequency.length - 4 + index}位</td>
+                    <td><span class="number">${item.number}</span></td>
+                    <td>${item.count}回</td>
+                    <td>${item.percentage}%</td>
+                </tr>
+            `;
+        });
+
+        analysisHtml += '</table>';
+
+        // 基本統計情報の追加
+        const counts = sortedFrequency.map(item => item.count);
+        const average = counts.reduce((a, b) => a + b, 0) / counts.length;
+        const max = Math.max(...counts);
+        const min = Math.min(...counts);
+
+        analysisHtml += `
+            <h3>基本統計情報</h3>
+            <table>
+                <tr>
+                    <th>項目</th>
+                    <th>値</th>
+                </tr>
+                <tr>
+                    <td>平均出現回数</td>
+                    <td>${average.toFixed(2)}回</td>
+                </tr>
+                <tr>
+                    <td>最多出現回数</td>
+                    <td>${max}回</td>
+                </tr>
+                <tr>
+                    <td>最少出現回数</td>
+                    <td>${min}回</td>
+                </tr>
+            </table>
+        `;
+
+        document.getElementById('analysis-result').innerHTML = analysisHtml;
+    }
+
+    // 予測番号生成関数
+    function predictNumbers() {
+        const data = currentTab === 'loto6' ? loto6Data : loto7Data;
+        const frequency = analyzeFrequency(data);
+        const maxNumber = currentTab === 'loto6' ? 43 : 37;
+        const numberCount = currentTab === 'loto6' ? 6 : 7;
+
+        // 重み付け配列の作成
+        const weightedNumbers = [];
+        for (let i = 1; i <= maxNumber; i++) {
+            const count = frequency[i] || 0;
+            weightedNumbers.push({
+                number: i,
+                weight: count / data.length + Math.random() * 0.1 // ランダム性を追加
+            });
+        }
+
+        // 番号の選択
+        const predicted = new Set(); // 重複を防ぐためにSetを使用
+        while (predicted.size < numberCount) {
+            weightedNumbers.sort((a, b) => b.weight - a.weight);
+            const selectedIndex = Math.floor(Math.random() * Math.min(10, weightedNumbers.length));
+            predicted.add(weightedNumbers[selectedIndex].number);
+            weightedNumbers.splice(selectedIndex, 1);
+        }
+
+        return Array.from(predicted).sort((a, b) => a - b);
+    }
+
+    // 予測結果表示関数
+    function displayPredictions() {
+        const predictions = [];
+        for (let i = 0; i < 5; i++) {
+            predictions.push(predictNumbers());
+        }
+
+        let predictionHtml = `
+            <h3>${currentTab === 'loto6' ? 'ロト6' : 'ロト7'}の予測番号</h3>
+            <table>
+                <tr>
+                    <th>予測セット</th>
+                    <th>予測番号</th>
+                </tr>
+        `;
+
+        predictions.forEach((pred, index) => {
+            predictionHtml += `
+                <tr>
+                    <td>セット${index + 1}</td>
+                    <td>${pred.map(n => `<span class="number prediction">${n}</span>`).join('')}</td>
+                </tr>
+            `;
+        });
+
+        predictionHtml += '</table>';
+
+        predictionHtml += `
+            <div class="note">
+                <p><strong>注意事項：</strong></p>
+                <ul>
+                    <li>この予測は過去の出現頻度とランダム性を組み合わせて生成しています。</li>
+                    <li>確実に当選を保証するものではありません。</li>
+                    <li>参考情報としてお使いください。</li>
+                </ul>
+            </div>
+        `;
+
+        document.getElementById('prediction-result').innerHTML = predictionHtml;
+    }
+
+    // グラフ更新関数
+    function updateFrequencyChart(frequency) {
+        const ctx = document.getElementById('frequencyChart').getContext('2d');
+        
+        if (frequencyChart) {
+            frequencyChart.destroy();
+        }
+        
+        const labels = Object.keys(frequency);
+        const data = Object.values(frequency);
+        
+        frequencyChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '出現回数',
+                    data: data,
+                    backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                    borderColor: 'rgba(0, 123, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    // 過去データ表示関数
+    function displayHistoricalData(recentData) {
+        let html = `
+            <h2>直近の抽選結果</h2>
+            <table>
+                <tr>
+                    <th>回号</th>
+                    <th>抽選日</th>
+                    <th>当選番号</th>
+                    <th>ボーナス数字</th>
+                </tr>
+        `;
+        
+        recentData.forEach(entry => {
+            html += `
+                <tr>
+                    <td>${entry.回号}</td>
+                    <td>${entry.抽選日}</td>
+                    <td>${entry.numbers.map(n => `<span class="number">${n}</span>`).join('')}</td>
+                    <td>${entry.ボーナス.map(n => `<span class="number bonus">${n}</span>`).join('')}</td>
+                </tr>
+            `;
+        });
+        
+        html += '</table>';
+        document.getElementById('historical-data').innerHTML = html;
+    }
+
+    // 結果クリア関数
+    function clearResults() {
+        document.getElementById('analysis-result').innerHTML = '';
+        document.getElementById('prediction-result').innerHTML = '';
+        document.getElementById('historical-data').innerHTML = '';
+        document.getElementById('error-message').innerHTML = '';
+        if (frequencyChart) {
+            frequencyChart.destroy();
+            frequencyChart = null;
+        }
+        // プログレスバーをリセット
+        document.getElementById('progress-bar').style.width = '0%';
+        document.getElementById('progress-bar').textContent = '0%';
+        // 分析ステップをリセット
+        for (let i = 1; i <= 5; i++) {
+            updateAnalysisStep(i, 'none');
+        }
+    }
+
+    // 結果保存関数
+    function saveResults() {
+        try {
+            const timestamp = new Date().toLocaleString();
+            const analysisResult = document.getElementById('analysis-result').innerHTML;
+            const predictionResult = document.getElementById('prediction-result').innerHTML;
+            const historicalData = document.getElementById('historical-data').innerHTML;
+
+            const content = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>ロト予測結果 - ${timestamp}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        .number { display: inline-block; width: 36px; height: 36px; line-height: 36px; text-align: center; border-radius: 50%; background-color: #007bff; color: white; margin: 0 2px; }
+                        .bonus { background-color: #dc3545; }
+                        .prediction { background-color: #28a745; }
+                        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+                        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+                        .note { background-color: #fff3cd; border: 1px solid #ffeeba; padding: 15px; margin-top: 20px; }
+                    </style>
+                </head>
+                <body>
+                    <h1>ロト予測結果 - ${timestamp}</h1>
+                    <div>${analysisResult}</div>
+                    <div>${predictionResult}</div>
+                    <div>${historicalData}</div>
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob([content], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `loto-prediction-${new Date().toISOString().slice(0,10)}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showError('');
+        } catch (error) {
+            showError('結果の保存中にエラーが発生しました: ' + error.message);
+        }
+    }
+</script>
+</body>
+</html>
